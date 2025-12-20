@@ -18,7 +18,7 @@ reused programmatically (tests, editors, other binaries).
 
 ```mermaid
 graph TD
-    F[front crate<br/>(lex+parse)] -->|tokens| TC[middle::typecheck]
+    F["front crate\n(lex+parse)"] -->|tokens| TC[middle::typecheck]
     TC -->|typed AST| HIR[middle::hir]
     HIR --> MIR[middle::mir]
     MIR --> LIR[middle::lowir]
