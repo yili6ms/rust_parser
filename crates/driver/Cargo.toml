@@ -1,0 +1,10 @@
+[package]
+name = "dsl_driver"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dsl_front = { path = "../front" }
+dsl_middle = { path = "../middle" }
+dsl_codegen = { path = "../codegen" }
+thiserror = "1.0"
