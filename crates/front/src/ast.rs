@@ -33,15 +33,29 @@ pub enum TypeExpr {
     Unit,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ExprId(u32);
+
+impl ExprId {
+    pub fn new(raw: u32) -> Self {
+        Self(raw)
+    }
+
+    pub fn index(self) -> u32 {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Expr {
+    pub id: ExprId,
     pub kind: ExprKind,
     pub span: Span,
 }
 
 impl Expr {
-    pub fn new(kind: ExprKind, span: Span) -> Self {
-        Self { kind, span }
+    pub fn new(id: ExprId, kind: ExprKind, span: Span) -> Self {
+        Self { id, kind, span }
     }
 }
 

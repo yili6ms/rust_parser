@@ -1,9 +1,9 @@
 # Mini DSL Specification
 
-This repository experiments with a deliberately tiny expression language that
-still provides the pieces required by the README plan: tokens, parser,
-typechecker, and CLI driver. The surface syntax intentionally mirrors Rust and
-ML influences so it is ergonomic to read.
+This repository hosts a deliberately tiny expression language that nonetheless
+exercises the full README plan: tokenizer, parser, type inference, type checker,
+and CLI driver. The surface syntax mirrors Rust and ML influences so the code
+is familiar to read while remaining easy to extend.
 
 ## Lexical structure
 
@@ -46,7 +46,7 @@ type         ::= "i32" | "bool" | "unit"
 Blocks evaluate to the last contained expression and introduce a new lexical
 scope. `let` bindings are scoped to the smallest enclosing block.
 
-## Type system
+## Type system and inference
 
 * Primitive types: `i32`, `bool`, `unit`.
 * Function types: `fn(param_0, ..., param_n) -> ret` automatically derived from
@@ -59,8 +59,25 @@ scope. `let` bindings are scoped to the smallest enclosing block.
 * Function calls require the callee expression to have a function type and the
   argument count and types must match the signature.
 
-The typechecker infers local variable types from the initializer expression, and
-optional annotations on `let` bindings are enforced when present.
+### Inference rules
+
+The typechecker first infers the type of every expression, then verifies any
+explicit annotations:
+
+1. Each literal carries an intrinsic type (`i32`, `bool`, or `unit` for empty
+   blocks).
+2. `let name = expr;` infers the variable type from `expr`. If an annotation is
+   present, e.g. `let name: i32 = expr;`, the inferred type must match the
+   annotation.
+3. Function parameters use their declared types, and the function body must
+   evaluate to the annotated return type.
+4. Control-flow joins (e.g., both arms of `if`) require unified types. The
+   inferred branch type becomes the expression type of the `if`.
+
+Because inference is local, the checker reports precise errors when a
+constraint fails (mismatched operand, branch, or annotation types), pinpointing
+the expression that triggered the conflict. Structural checks run before codegen
+so only fully typed programs reach the IR pipeline.
 
 ## Intermediate representations
 

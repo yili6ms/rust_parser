@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        BinaryOp, Block, BlockItem, Expr, ExprKind, Function, Item, LetStmt, Param, Program,
+        BinaryOp, Block, BlockItem, Expr, ExprId, ExprKind, Function, Item, LetStmt, Param, Program,
         TypeExpr,
     },
     span::Span,
@@ -21,16 +21,27 @@ pub enum ParseError {
 }
 
 pub fn parse(tokens: &[Token]) -> Result<Program, ParseError> {
-    let mut parser = Parser { tokens, pos: 0 };
+    let mut parser = Parser {
+        tokens,
+        pos: 0,
+        next_expr_id: 0,
+    };
     parser.parse_program()
 }
 
 struct Parser<'a> {
     tokens: &'a [Token],
     pos: usize,
+    next_expr_id: u32,
 }
 
 impl<'a> Parser<'a> {
+    fn alloc_expr(&mut self, kind: ExprKind, span: Span) -> Expr {
+        let id = ExprId::new(self.next_expr_id);
+        self.next_expr_id += 1;
+        Expr::new(id, kind, span)
+    }
+
     fn parse_program(&mut self) -> Result<Program, ParseError> {
         let mut items = Vec::new();
         while !self.is_at_end() {
@@ -110,7 +121,7 @@ impl<'a> Parser<'a> {
             self.expect_token("`else`", |k| matches!(k, TokenKind::Else))?;
             let else_branch = self.parse_expression()?;
             let span = tok.span.join(else_branch.span);
-            Ok(Expr::new(
+            Ok(self.alloc_expr(
                 ExprKind::If {
                     cond: Box::new(cond),
                     then_branch: Box::new(then_branch),
@@ -128,7 +139,7 @@ impl<'a> Parser<'a> {
         while self.match_token(|k| matches!(k, TokenKind::EqEq)).is_some() {
             let right = self.parse_comparison()?;
             let span = expr.span.join(right.span);
-            expr = Expr::new(
+            expr = self.alloc_expr(
                 ExprKind::Binary {
                     op: BinaryOp::Eq,
                     left: Box::new(expr),
@@ -156,7 +167,7 @@ impl<'a> Parser<'a> {
             if let Some(op) = op {
                 let right = self.parse_term()?;
                 let span = expr.span.join(right.span);
-                expr = Expr::new(
+                expr = self.alloc_expr(
                     ExprKind::Binary {
                         op,
                         left: Box::new(expr),
@@ -187,7 +198,7 @@ impl<'a> Parser<'a> {
             if let Some(op) = op {
                 let right = self.parse_factor()?;
                 let span = expr.span.join(right.span);
-                expr = Expr::new(
+                expr = self.alloc_expr(
                     ExprKind::Binary {
                         op,
                         left: Box::new(expr),
@@ -218,7 +229,7 @@ impl<'a> Parser<'a> {
             if let Some(op) = op {
                 let right = self.parse_call()?;
                 let span = expr.span.join(right.span);
-                expr = Expr::new(
+                expr = self.alloc_expr(
                     ExprKind::Binary {
                         op,
                         left: Box::new(expr),
@@ -254,7 +265,7 @@ impl<'a> Parser<'a> {
                 }
                 let close = self.expect_token("`)`", |k| matches!(k, TokenKind::RParen))?;
                 let span = start_span.join(close.span);
-                expr = Expr::new(
+                expr = self.alloc_expr(
                     ExprKind::Call {
                         callee: Box::new(expr),
                         args,
@@ -271,18 +282,18 @@ impl<'a> Parser<'a> {
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         if let Some(tok) = self.match_token(|k| matches!(k, TokenKind::Int(_))) {
             if let TokenKind::Int(value) = tok.kind.clone() {
-                return Ok(Expr::new(ExprKind::Int(value), tok.span));
+                return Ok(self.alloc_expr(ExprKind::Int(value), tok.span));
             }
         }
         if let Some(tok) = self.match_token(|k| matches!(k, TokenKind::True)) {
-            return Ok(Expr::new(ExprKind::Bool(true), tok.span));
+            return Ok(self.alloc_expr(ExprKind::Bool(true), tok.span));
         }
         if let Some(tok) = self.match_token(|k| matches!(k, TokenKind::False)) {
-            return Ok(Expr::new(ExprKind::Bool(false), tok.span));
+            return Ok(self.alloc_expr(ExprKind::Bool(false), tok.span));
         }
         if let Some(tok) = self.match_token(|k| matches!(k, TokenKind::Ident(_))) {
             if let TokenKind::Ident(name) = tok.kind.clone() {
-                return Ok(Expr::new(ExprKind::Var(name), tok.span));
+                return Ok(self.alloc_expr(ExprKind::Var(name), tok.span));
             }
         }
         if self
@@ -335,7 +346,7 @@ impl<'a> Parser<'a> {
         }
         let close = self.expect_token("`}`", |k| matches!(k, TokenKind::RBrace))?;
         let span = open.span.join(close.span);
-        Ok(Expr::new(ExprKind::Block(Block { items }), span))
+        Ok(self.alloc_expr(ExprKind::Block(Block { items }), span))
     }
 
     fn expect_ident(&mut self) -> Result<(String, Span), ParseError> {

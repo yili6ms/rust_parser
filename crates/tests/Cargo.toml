@@ -1,0 +1,9 @@
+[package]
+name = "dsl_tests"
+version = "0.1.0"
+edition = "2021"
+authors = ["dsl team"]
+publish = false
+
+[dependencies]
+dsl_driver = { path = "../driver" }

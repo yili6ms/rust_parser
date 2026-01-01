@@ -6,8 +6,8 @@ use dsl_front::{
     token::Token,
 };
 use dsl_middle::{
-    HirProgram, LowIrProgram, MirProgram, TypeError, lower_to_hir, lower_to_lowir, lower_to_mir,
-    typecheck,
+    HirProgram, LowIrProgram, MirProgram, TypeError, TypeInfo, lower_to_hir, lower_to_lowir,
+    lower_to_mir, typecheck,
 };
 use thiserror::Error;
 
@@ -18,6 +18,7 @@ pub struct Compiler;
 pub struct Compilation {
     pub tokens: Vec<Token>,
     pub program: Program,
+    pub types: TypeInfo,
     pub hir: HirProgram,
     pub mir: MirProgram,
     pub low_ir: LowIrProgram,
@@ -42,6 +43,10 @@ impl Compilation {
 
     pub fn dump_ast(&self) -> String {
         format!("{:#?}", self.program)
+    }
+
+    pub fn types(&self) -> &TypeInfo {
+        &self.types
     }
 
     pub fn hir(&self) -> &HirProgram {
@@ -73,13 +78,14 @@ impl Compiler {
     pub fn compile(&self, source: &str) -> Result<Compilation, CompilerError> {
         let tokens = lexer::lex(source)?;
         let program = parser::parse(&tokens)?;
-        typecheck(&program)?;
+        let types = typecheck(&program)?;
         let hir = lower_to_hir(&program);
         let mir = lower_to_mir(&hir);
         let low_ir = lower_to_lowir(&mir);
         Ok(Compilation {
             tokens,
             program,
+            types,
             hir,
             mir,
             low_ir,

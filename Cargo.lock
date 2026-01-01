@@ -151,6 +151,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "dsl_tests"
+version = "0.1.0"
+dependencies = [
+ "dsl_driver",
+]
+
+[[package]]
 name = "dslc"
 version = "0.1.0"
 dependencies = [
